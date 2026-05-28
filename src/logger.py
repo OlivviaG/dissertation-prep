@@ -6,7 +6,11 @@ from datetime import datetime
 
 # mood tracker logger
 def get_mood():
+<<<<<<< HEAD
     mood = input("Mood score (1-10): ")
+=======
+    mood = input("Rate your mood (1-10): ")
+>>>>>>> feature/energy-input
     return int(mood)
 
 def save_entry(mood):
