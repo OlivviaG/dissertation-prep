@@ -19,4 +19,6 @@ def save_entry(mood):
             writer.writerow(["timestamp", "mood"])
         writer.writerow([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), mood]) # write the timestamp and mood to the csv file
 
-    
+    if __name__ == "__main__":
+        mood = get_mood()           # get user input for mood
+        save_entry(mood)            # save the mood entry to the csv file
