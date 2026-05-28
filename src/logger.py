@@ -28,10 +28,11 @@ def save_entry(mood, energy, note):
         writer = csv.writer(f)
         if not file_exists: # if the file doesn't exist, write the header
             writer.writerow(["timestamp", "mood", "energy", "note"]) # write the header to the csv file 
-        writer.writerow([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), mood, energy]) # write the timestamp, mood, and energy to the csv file
+        writer.writerow([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), mood, energy, note]) # write the timestamp, mood, and energy to the csv file
 
-    if __name__ == "__main__":
-        mood = get_mood()           # get user input for mood
-        energy = get_energy()       # get user input for energy
-        save_entry(mood, energy)    # save the entry to the csv file
-        print(f"Entry saved: Mood={mood}, Energy={energy}")
+if __name__ == "__main__":
+    mood = get_mood()           # get user input for mood
+    energy = get_energy()       # get user input for energy
+    note = get_note()           # get user input for notes
+    save_entry(mood, energy, note)    # save the entry to the csv file
+    print(f"Entry saved: Mood={mood}, Energy={energy}, Note={note}") # print a confirmation message with the saved entry    
