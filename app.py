@@ -36,5 +36,12 @@ mood = st.slider("Mood (1-10)", min_value=1, max_value=10, value=5)
 energy_today = st.slider("Energy (1-10)", min_value=1, max_value=10, value=5)
 note = st.text_input("Any notes for today?")
 
+if "submissions" not in st.session_state:
+    st.session_state.submissions = 0
+
 if st.button("Submit"):
-    st.success(f"Check-in saved! Mood: {mood}, Energy: {energy_today}, Note: '{note}'")
+    st.session_state.submissions += 1
+    st.success(f"Check-in saved! Mood: {mood}, Energy: {energy_today}, Note: {note}")
+
+if st.session_state.submissions > 0:
+    st.write(f"Total check-ins this session: {st.session_state.submissions}")  
