@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-from src.database import initialise_db, get_or_create_user, save_checkin, get_checkins
+from src.database import initialise_db, get_or_create_user, save_checkin, get_checkins, get_all_users
 
 # Initialise the database on startup
 initialise_db()
@@ -11,11 +11,25 @@ st.write("Welcome to your personal health check-in system!")
 
 # Sidebar
 st.sidebar.title("Settings")
-name = st.sidebar.text_input("Your name", value="Student")
-st.write(f"Hello, {name}!")
 
-# Get or create user based on name
-user_id = get_or_create_user(name)
+from src.database import get_all_users
+
+existing_users = get_all_users()
+
+if existing_users:
+    options = existing_users + ["➕ Add new user"]
+    selection = st.sidebar.selectbox("Select user", options)
+
+    if selection == "➕ Add new user":
+        name = st.sidebar.text_input("Enter your name")
+    else:
+        name = selection
+else:
+    name = st.sidebar.text_input("Your name", value="Student")
+
+if name:
+    user_id = get_or_create_user(name)
+    st.write(f"Hello, {name}!")
 
 # Load this user's check-ins from the database
 df = get_checkins(user_id)
@@ -70,3 +84,7 @@ with col2:
 
     if st.session_state.submissions > 0:
         st.write(f"Total check-ins this session: {st.session_state.submissions}")
+
+
+
+

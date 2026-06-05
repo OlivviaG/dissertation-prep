@@ -90,3 +90,12 @@ def get_checkins(user_id: int) -> pd.DataFrame:
 
     conn.close()
     return df
+
+def get_all_users() -> list:
+    """Return a list of all usernames in the database."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM users ORDER BY name")
+    rows = cursor.fetchall()
+    conn.close()
+    return [row["name"] for row in rows]
