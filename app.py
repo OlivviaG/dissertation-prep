@@ -87,4 +87,25 @@ with col2:
 
 
 
+from src.time_series import generate_fake_data, compute_rolling_stats, flag_anomalies, plot_user_baseline
 
+st.subheader("Personal Baseline Analysis")
+
+selected_user = st.selectbox("Select synthetic user", ["User A", "User B", "User C"])
+
+profiles = {
+    "User A": dict(mean=65, std=3),
+    "User B": dict(mean=80, std=12),
+    "User C": dict(mean=72, std=7, anomaly_start=45, anomaly_mean=95)
+}
+
+profile = profiles[selected_user]
+df_ts = generate_fake_data(**profile)
+df_ts = compute_rolling_stats(df_ts)
+df_ts = flag_anomalies(df_ts)
+
+fig = plot_user_baseline(df_ts, user_name=selected_user)
+st.plotly_chart(fig, use_container_width=True)
+
+anomaly_count = df_ts['is_anomaly'].sum()
+st.metric("Anomalies Detected", int(anomaly_count))

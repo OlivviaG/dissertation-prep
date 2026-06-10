@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
+
 # Time Series Analysis
 
 
@@ -31,14 +33,75 @@ def flag_anomalies(df, threshold=2):
     return df
 
 
+def plot_user_baseline(df, user_name="User"):
+    """Plot heart rate with rolling mean, normal range band, and anomaly points."""
+    
+    fig = go.Figure()
+
+    # Normal range band (mean ± 2 std)
+    fig.add_trace(go.Scatter(
+        x=pd.concat([df['timestamp'], df['timestamp'].iloc[::-1]]),
+        y=pd.concat([
+            df['heart_rate_mean'] + 2 * df['heart_rate_std'],
+            (df['heart_rate_mean'] - 2 * df['heart_rate_std']).iloc[::-1]
+        ]),
+        fill='toself',
+        fillcolor='rgba(0, 100, 255, 0.1)',
+        line=dict(color='rgba(255,255,255,0)'),
+        name='Normal Range'
+    ))
+
+    # Rolling mean line
+    fig.add_trace(go.Scatter(
+        x=df['timestamp'],
+        y=df['heart_rate_mean'],
+        mode='lines',
+        line=dict(color='blue', width=2),
+        name='Rolling Mean'
+    ))
+
+    # Actual heart rate line
+    fig.add_trace(go.Scatter(
+        x=df['timestamp'],
+        y=df['heart_rate'],
+        mode='lines',
+        line=dict(color='gray', width=1),
+        name='Heart Rate'
+    ))
+
+    # Anomaly points in red
+    anomalies = df[df['is_anomaly'] == True]
+    fig.add_trace(go.Scatter(
+        x=anomalies['timestamp'],
+        y=anomalies['heart_rate'],
+        mode='markers',
+        marker=dict(color='red', size=10),
+        name='Anomaly'
+    ))
+
+    fig.update_layout(
+        title=f"{user_name} — Personal Baseline",
+        xaxis_title="Date",
+        yaxis_title="Heart Rate (bpm)"
+    )
+
+    return fig
 
 if __name__ == "__main__":
     user_a = generate_fake_data(mean=65, std=3)
     user_b = generate_fake_data(mean=80, std=12)
     user_c = generate_fake_data(mean=72, std=7, anomaly_start=45, anomaly_mean=95)
 
-    print("User A:", user_a.shape)
-    print("User B:", user_b.shape)
-    print("User C:", user_c.shape)
-    print("\nUser C tail:")
-    print(user_c.tail(20))
+    for name, df in [("User A", user_a), ("User B", user_b), ("User C", user_c)]:
+        df = compute_rolling_stats(df)
+        df = flag_anomalies(df)
+        anomaly_count = df['is_anomaly'].sum()
+        print(f"{name}: {anomaly_count} anomalies flagged")
+
+if __name__ == "__main__":
+    user_c = generate_fake_data(mean=72, std=7, anomaly_start=45, anomaly_mean=95)
+    user_c = compute_rolling_stats(user_c)
+    user_c = flag_anomalies(user_c)
+    
+    fig = plot_user_baseline(user_c, user_name="User C")
+    fig.show()
