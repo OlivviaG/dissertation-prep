@@ -2,20 +2,21 @@ import numpy as np
 import pandas as pd
 # Time Series Analysis
 
-def generate_fake_data(n_days=80):     # takes parameter n_days (default 80)
 
-    # for n_days, with some random noise
+def generate_fake_data(mean, std, n_days=60, anomaly_start=None, anomaly_mean=None):
+
     timestamps = pd.date_range(start=pd.Timestamp.today(), periods=n_days, freq='D')
 
-    # uses numpy to generate realistic looking heart rate ~70bpm 
-    heart_rates = np.random.normal(loc=70, scale=10, size=n_days)
-    heart_rates = np.clip(heart_rates, 50, 100)  # Ensure realistic bounds
-    
-    # returns a pandas DF with 2 columns: timestamp and heart_rate
+    if anomaly_start is not None and anomaly_mean is not None:
+        normal_period = np.random.normal(loc=mean, scale=std, size=anomaly_start)
+        anomaly_period = np.random.normal(loc=anomaly_mean, scale=std, size=n_days-anomaly_start)
+        heart_rates = np.concatenate([normal_period, anomaly_period])
+    else:
+        heart_rates = np.random.normal(loc=mean, scale=std, size=n_days)
+
+    heart_rates = np.clip(heart_rates, 40, 120)
     df = pd.DataFrame({'timestamp': timestamps, 'heart_rate': heart_rates})
-
     return df
-
 
 
 def compute_rolling_stats(df, window=7):
@@ -31,10 +32,13 @@ def flag_anomalies(df, threshold=2):
 
 
 
-
 if __name__ == "__main__":
-    df = generate_fake_data()
-    df = compute_rolling_stats(df)
-    df = flag_anomalies(df)
-    print(df[df['is_anomaly'] == True])
+    user_a = generate_fake_data(mean=65, std=3)
+    user_b = generate_fake_data(mean=80, std=12)
+    user_c = generate_fake_data(mean=72, std=7, anomaly_start=45, anomaly_mean=95)
 
+    print("User A:", user_a.shape)
+    print("User B:", user_b.shape)
+    print("User C:", user_c.shape)
+    print("\nUser C tail:")
+    print(user_c.tail(20))
