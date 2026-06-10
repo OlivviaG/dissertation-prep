@@ -109,3 +109,71 @@ st.plotly_chart(fig, use_container_width=True)
 
 anomaly_count = df_ts['is_anomaly'].sum()
 st.metric("Anomalies Detected", int(anomaly_count))
+
+
+from src.anomaly_detection import compute_zscore, flag_anomalies_zscore, run_isolation_forest
+
+st.subheader("Anomaly Detection Comparison")
+
+selected_user_anomaly = st.selectbox(
+    "Select user for anomaly detection",
+    ["User A", "User B", "User C"],
+    key="anomaly_user_selector"
+)
+
+profiles = {
+    "User A": dict(mean=65, std=3),
+    "User B": dict(mean=80, std=12),
+    "User C": dict(mean=72, std=7, anomaly_start=45, anomaly_mean=95)
+}
+
+profile = profiles[selected_user_anomaly]
+df_ad = generate_fake_data(**profile)
+df_ad = compute_rolling_stats(df_ad)
+df_ad = compute_zscore(df_ad)
+df_ad = flag_anomalies_zscore(df_ad)
+df_ad, _ = run_isolation_forest(df_ad, features=['heart_rate'])
+
+col1, col2 = st.columns(2)
+with col1:
+    st.metric("Z-Score Anomalies", int(df_ad['is_anomaly_zscore'].sum()))
+with col2:
+    st.metric("Isolation Forest Anomalies", int(df_ad['isolation_forest_anomaly'].sum()))
+
+import plotly.graph_objects as go
+
+fig = go.Figure()
+
+fig.add_trace(go.Scatter(
+    x=df_ad['timestamp'],
+    y=df_ad['heart_rate'],
+    mode='lines',
+    line=dict(color='gray', width=1),
+    name='Heart Rate'
+))
+
+zscore_points = df_ad[df_ad['is_anomaly_zscore'] == True]
+fig.add_trace(go.Scatter(
+    x=zscore_points['timestamp'],
+    y=zscore_points['heart_rate'],
+    mode='markers',
+    marker=dict(color='blue', size=10, symbol='circle'),
+    name='Z-Score Anomaly'
+))
+
+if_points = df_ad[df_ad['isolation_forest_anomaly'] == True]
+fig.add_trace(go.Scatter(
+    x=if_points['timestamp'],
+    y=if_points['heart_rate'],
+    mode='markers',
+    marker=dict(color='red', size=10, symbol='x'),
+    name='Isolation Forest Anomaly'
+))
+
+fig.update_layout(
+    title=f"{selected_user_anomaly} — Anomaly Detection Comparison",
+    xaxis_title="Date",
+    yaxis_title="Heart Rate (bpm)"
+)
+
+st.plotly_chart(fig, use_container_width=True)
