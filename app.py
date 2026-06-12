@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 
 from src.database import initialise_db, get_or_create_user, save_checkin, get_checkins, get_all_users
+from src.nlp import analyse_sentiment_transformer, analyse_sentiment_VADER
+from src.time_series import generate_fake_data, compute_rolling_stats, flag_anomalies, plot_user_baseline
+from src.anomaly_detection import compute_zscore, flag_anomalies_zscore, run_isolation_forest
+import plotly.graph_objects as go
 
 # Initialise the database on startup
 initialise_db()
@@ -12,7 +16,6 @@ st.write("Welcome to your personal health check-in system!")
 # Sidebar
 st.sidebar.title("Settings")
 
-from src.database import get_all_users
 
 existing_users = get_all_users()
 
@@ -46,7 +49,8 @@ else:
 # History table
 st.subheader("Check-in History")
 if not df.empty:
-    st.dataframe(df[["energy_level", "stress_level", "heart_rate", "mood_text"]], use_container_width=True)
+    st.dataframe(df[["energy_level", "stress_level", "heart_rate", "mood_text",
+                     "vader_compound", "transformer_label"]], use_container_width=True)
 else:
     st.info("No history yet.")
 
@@ -71,23 +75,51 @@ with col2:
         st.session_state.submissions = 0
 
     if st.button("Submit"):
+        # 1. analyse the text (only if there is any)
+        if note.strip():
+            vader = analyse_sentiment_VADER(note)
+            transformer = analyse_sentiment_transformer(note)
+            vader_compound = vader["compound"]
+            transformer_label = transformer["label"]
+            transformer_score = transformer["score"]
+        else:
+            vader_compound = None
+            transformer_label = None
+            transformer_score = None
+
+        # 2. save once, whatever happened above
         save_checkin(
             user_id=user_id,
             energy=float(energy_today),
             stress=float(stress_today),
             heart_rate=float(heart_rate),
-            mood_text=note
+            mood_text=note,
+            vader_compound=vader_compound,
+            transformer_label=transformer_label,
+            transformer_score=transformer_score,
         )
         st.session_state.submissions += 1
-        st.success(f"Saved! Mood: {mood}, Energy: {energy_today}")
+
         st.rerun()
+    
+    # Latest sentiment verdict — runs every rerun, reads from the DB
+    history = get_checkins(user_id)
+    if not history.empty:
+        latest = history.iloc[-1]
+        if pd.notna(latest["vader_compound"]):
+            c = latest["vader_compound"]
+            detail = f"VADER: {c:.2f} | Transformer: {latest['transformer_label']} ({latest['transformer_score']:.2f})"
+            if c >= 0.05:
+                st.success(f"Sentiment: Positive — {detail}")
+            elif c <= -0.05:
+                st.error(f"Sentiment: Negative — {detail}")
+            else:
+                st.warning(f"Sentiment: Neutral — {detail}")
+        else:
+            st.info("No mood text on the latest check-in — no sentiment recorded.")
 
-    if st.session_state.submissions > 0:
-        st.write(f"Total check-ins this session: {st.session_state.submissions}")
+    
 
-
-
-from src.time_series import generate_fake_data, compute_rolling_stats, flag_anomalies, plot_user_baseline
 
 st.subheader("Personal Baseline Analysis")
 
@@ -111,7 +143,6 @@ anomaly_count = df_ts['is_anomaly'].sum()
 st.metric("Anomalies Detected", int(anomaly_count))
 
 
-from src.anomaly_detection import compute_zscore, flag_anomalies_zscore, run_isolation_forest
 
 st.subheader("Anomaly Detection Comparison")
 
@@ -140,7 +171,6 @@ with col1:
 with col2:
     st.metric("Isolation Forest Anomalies", int(df_ad['isolation_forest_anomaly'].sum()))
 
-import plotly.graph_objects as go
 
 fig = go.Figure()
 

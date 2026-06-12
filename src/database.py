@@ -27,16 +27,20 @@ def initialise_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS checkins (
-            checkin_id   INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id      INTEGER,
-            timestamp    TEXT,
-            energy_level REAL,
-            stress_level REAL,
-            heart_rate   REAL,
-            mood_text    TEXT,
+            checkin_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id           INTEGER,
+            timestamp         TEXT,
+            energy_level      REAL,
+            stress_level      REAL,
+            heart_rate        REAL,
+            mood_text         TEXT,
+            vader_compound    REAL,
+            transformer_label TEXT,
+            transformer_score REAL,
             FOREIGN KEY (user_id) REFERENCES users(user_id)
         )
     """)
+
 
     conn.commit()
     conn.close()
@@ -64,15 +68,19 @@ def get_or_create_user(name: str) -> int:
     return user_id
 
 
-def save_checkin(user_id: int, energy: float, stress: float, heart_rate: float, mood_text: str):
-    """Insert a new check-in row for a user."""
+def save_checkin(user_id: int, energy: float, stress: float, heart_rate: float, mood_text: str,
+                 vader_compound: float = None, transformer_label: str = None,
+                 transformer_score: float = None):
+    """Insert a new check-in row for a user, with optional sentiment scores."""
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO checkins (user_id, timestamp, energy_level, stress_level, heart_rate, mood_text)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (user_id, datetime.now().isoformat(), energy, stress, heart_rate, mood_text))
+        INSERT INTO checkins (user_id, timestamp, energy_level, stress_level, heart_rate,
+                              mood_text, vader_compound, transformer_label, transformer_score)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, datetime.now().isoformat(), energy, stress, heart_rate,
+          mood_text, vader_compound, transformer_label, transformer_score))
 
     conn.commit()
     conn.close()
