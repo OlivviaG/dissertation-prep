@@ -21,11 +21,11 @@ def generate_fake_data(mean, std, n_days=60, anomaly_start=None, anomaly_mean=No
     return df
 
 
-def compute_rolling_stats(df, window=7):
-    # computes rolling mean and std for heart_rate
-    df['heart_rate_mean'] = df['heart_rate'].rolling(window=window).mean()
-    df['heart_rate_std'] = df['heart_rate'].rolling(window=window).std()
+def compute_rolling_stats(df, column='heart_rate', window=7):
+    df[f"{column}_mean"] = df[column].rolling(window=window).mean()
+    df[f'{column}_std'] = df[column].rolling(window=window).std()
     return df
+
 
 def flag_anomalies(df, threshold=2):
     # flags anomalies where heart_rate deviates from mean by more than threshold * std
