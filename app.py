@@ -6,6 +6,7 @@ from src.nlp import analyse_sentiment_transformer, analyse_sentiment_VADER
 from src.time_series import generate_fake_data, compute_rolling_stats, flag_anomalies, plot_user_baseline
 from src.anomaly_detection import compute_zscore, flag_anomalies_zscore, run_isolation_forest
 import plotly.graph_objects as go
+import requests
 
 # Initialise the database on startup
 initialise_db()
@@ -74,32 +75,22 @@ with col2:
     if "submissions" not in st.session_state:
         st.session_state.submissions = 0
 
+# This is the button section 
+
+
     if st.button("Submit"):
-        # 1. analyse the text (only if there is any)
-        if note.strip():
-            vader = analyse_sentiment_VADER(note)
-            transformer = analyse_sentiment_transformer(note)
-            vader_compound = vader["compound"]
-            transformer_label = transformer["label"]
-            transformer_score = transformer["score"]
-        else:
-            vader_compound = None
-            transformer_label = None
-            transformer_score = None
-
-        # 2. save once, whatever happened above
-        save_checkin(
-            user_id=user_id,
-            energy=float(energy_today),
-            stress=float(stress_today),
-            heart_rate=float(heart_rate),
-            mood_text=note,
-            vader_compound=vader_compound,
-            transformer_label=transformer_label,
-            transformer_score=transformer_score,
+        response = requests.post(                   # Calls the API and tries that. 
+            "http://127.0.0.1:8000/checkin",
+            json={
+                "user_id": user_id,
+                "energy_level": energy_today,
+                "stress_level": stress_today,
+                "heart_rate": heart_rate,
+                "mood_text": note,
+            },
         )
+        result = response.json()
         st.session_state.submissions += 1
-
         st.rerun()
     
     # Latest sentiment verdict — runs every rerun, reads from the DB
