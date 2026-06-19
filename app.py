@@ -60,9 +60,23 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("Risk Score")
-    threshold = st.slider("Sensitivity", min_value=1, max_value=10, value=5)
-    risk_score = int((10 - threshold) * 10)
-    st.metric(label="Current Risk Score", value=f"{risk_score}%")
+    risk_response = requests.get(f"http://127.0.0.1:8000/users/{user_id}/risk")
+    
+    risk = risk_response.json()
+    risk_score = risk['risk_score']
+    status = risk['status']
+
+    if risk_score is None: 
+        st.text("No data to calculated risk score")
+    else: 
+        st.metric(label="Current Risk Score", value=f"{risk_score}%")
+        if status == "normal":
+            st.success(f"Status: {status}")
+        elif status == "mild concern":
+            st.warning(f"Status: {status}")
+        else:
+            st.error(f"Status: {status}")
+        
 
 with col2:
     st.subheader("Today's Check-in")
