@@ -6,6 +6,7 @@ from src.database import save_checkin, initialise_db, get_checkins
 from src.nlp import analyse_sentiment_VADER, analyse_sentiment_transformer
 from src.time_series import compute_rolling_stats
 from src.anomaly_detection import compute_zscore, flag_anomalies_zscore, run_isolation_forest
+import pandas as pd 
 
 class CheckIn(BaseModel):
     user_id: int
@@ -92,3 +93,39 @@ def get_anomalies(user_id: int, method: str = "zscore"):
     if len(df) < 7:
         return {"user_id": user_id, "method": method, "anomalies": [],
                 "message": "Not enough history for reliable detection (need at least 7 check-ins)"}
+
+
+@app.get("/users/{user_id}/risk")
+def get_risk(user_id: int):
+    df = get_checkins(user_id)
+    if df.empty:
+        return {"user_id": user_id, "risk_score": None, "status": "No check-in history"}
+
+    # 1. fetch the value FIRST
+    latest = df.iloc[-1]
+    sentiment_score = latest["vader_compound"]
+
+    # 2. THEN check if it's missing, and fix it if so
+    if pd.isna(sentiment_score):
+        sentiment_score = 0.0   # no text → treat as neutral
+
+    # 3. now sentiment_score definitely has a number — safe to use
+    sentiment_risk = (1 - sentiment_score) / 2
+
+    risk_score = round(sentiment_risk * 100)
+
+    # simple fusion — sentiment-led for now; physiological signal to be added
+    if risk_score < 33:
+        status = "normal"
+    elif risk_score < 66:
+        status = "mild concern"
+    else:
+        status = "elevated concern"
+
+    return {
+        "user_id": user_id,
+        "risk_score": risk_score,
+        "status": status,
+        "latest_sentiment": sentiment_score,
+    }
+
